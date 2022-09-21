@@ -1,11 +1,10 @@
 import Foundation
 
-struct Action {
-    enum Command {
-        case executable(executable: String)
-        case builtin(command: BuiltinCommand)
+indirect enum Action {
+    indirect enum CommandKind {
+        case executable(executable: String, arguments: [String])
+        case builtin(command: BuiltinCommand, arguments: [String])
     }
-
-    var command: Command
-    var arguments: [String]
+    case pipe(command: CommandKind, action: Action)
+    case single(command: CommandKind)
 }

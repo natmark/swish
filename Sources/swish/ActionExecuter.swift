@@ -2,42 +2,42 @@ import Foundation
 
 struct ActionExecuter {
     static func execute(action: Action) {
-        switch action.command {
-        case .builtin(let command):
-            executeBuiltin(command: command, arguments: action.arguments)
-        case .executable(let executable):
-            executeCommand(executable: executable, arguments: action.arguments)
-        }
-    }
+        switch action {
+        case .pipe(let command, let action):
+            // TODO: actionがpipeの場合のケース
+            if case .single(let pipeCommand) = action {
+                let pipe = Pipe()
+                let first = ProcessGenerator.generate(
+                    command: command,
+                    standardOutput: pipe
+                )
+                
+                do {
+                    try first.run()
+                } catch {
+                    print("swish:", error)
+                }
 
-    private static func executeBuiltin(command: BuiltinCommand, arguments: [String]) {
-        switch command {
-        case .cd:
-            BuiltinCommand.cd(arguments: arguments)
-        case .exit:
-            BuiltinCommand.exit(arguments: arguments)
-        case .help:
-            BuiltinCommand.help(arguments: arguments)
-        }
-    }
-    
-    private static func executeCommand(executable: String, arguments: [String]) {
-        let process = Process()
-        process.environment = ProcessInfo.processInfo.environment
+                let second = ProcessGenerator.generate(
+                    command: pipeCommand,
+                    standardInput: pipe
+                )
 
-        if executable.hasPrefix("/") || executable.hasPrefix(".") {
-            process.executableURL = URL(fileURLWithPath: executable)
-            process.arguments = arguments
-        } else {
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-            process.arguments = [executable] + arguments
+                do {
+                    try second.run()
+                } catch {
+                    print("swish:", error)
+                }
+                second.waitUntilExit()
+            }            
+        case .single(let command):
+            let process = ProcessGenerator.generate(command: command)
+            do {
+                try process.run()
+            } catch {
+                print("swish:", error)
+            }
+            process.waitUntilExit()
         }
-
-        do {
-            try process.run()
-        } catch {
-            print("swish:", error)
-        }
-        process.waitUntilExit()
     }
 }
